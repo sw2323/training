@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Apex Fitness Tracker</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --accent: #f5a623;
+    --accent2: #e8891a;
+    --green: #4caf50;
+    --red: #e53935;
+    --blue: #42a5f5;
+    --text: #f0f0f0;
+    --muted: #888;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; min-height: 100vh; }
+
+  /* NAV */
+  #nav { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; position: sticky; top: 0; z-index: 100; }
+  #nav::-webkit-scrollbar { display: none; }
+  .nav-btn { flex-shrink: 0; padding: 12px 14px; background: none; border: none; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* PAGES */
+  .page { display: none; padding: 16px; max-width: 480px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden; }
+  .card-header { padding: 14px 16px; background: var(--surface2); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .card-header h3 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 14px 16px; }
+  .badge { background: var(--accent); color: #000; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 20px; }
+  .badge.green { background: var(--green); color: #fff; }
+  .badge.blue { background: var(--blue); color: #000; }
+  .badge.muted { background: var(--border); color: var(--muted); }
+
+  /* PHASE SELECTOR */
+  .phase-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .phase-tab { flex: 1; padding: 10px; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; }
+  .phase-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  /* WORKOUT TABLE */
+  .exercise-row { border-bottom: 1px solid var(--border); padding: 10px 0; }
+  .exercise-row:last-child { border-bottom: none; }
+  .ex-name { font-weight: 600; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .ex-how { font-size: 12px; color: #cfcfcf; margin-bottom: 6px; line-height: 1.5; background: var(--surface2); border-left: 3px solid var(--blue); padding: 8px 10px; border-radius: 0 6px 6px 0; }
+  .ex-note { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.4; font-style: italic; }
+  .shoulder-flag { background: #ff6b6b22; color: #ff6b6b; font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid #ff6b6b44; }
+  .sets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; margin-top: 6px; }
+  .set-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 6px; display: flex; flex-direction: column; gap: 5px; transition: background 0.15s, border-color 0.15s; min-width: 0; }
+  .set-head { display: flex; justify-content: space-between; align-items: center; font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; gap: 4px; }
+  .set-target { color: var(--accent); white-space: nowrap; }
+  .set-weight-row { display: flex; align-items: baseline; justify-content: center; gap: 3px; }
+  .set-weight-row input { width: 100%; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 18px; font-weight: 800; text-align: center; padding: 6px 2px; outline: none; -moz-appearance: textfield; appearance: textfield; }
+  .set-weight-row input::-webkit-outer-spin-button, .set-weight-row input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .set-weight-row input:focus { border-color: var(--accent); }
+  .set-weight-row .unit { font-size: 9px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+  .set-reps-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; text-align: center; padding: 4px 2px; outline: none; -moz-appearance: textfield; appearance: textfield; }
+  .set-reps-input::-webkit-outer-spin-button, .set-reps-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .set-reps-input::placeholder { color: #555; font-size: 10px; }
+  .set-reps-input:focus { border-color: var(--accent); }
+  .set-mark { width: 100%; padding: 6px 2px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 10px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.4px; transition: all 0.15s; }
+  .set-mark:hover { border-color: var(--accent); }
+  .set-mark:active { transform: scale(0.98); }
+  .set-box.set-done { background: #163316; border-color: var(--green); }
+  .set-box.set-done .set-mark { background: var(--green); border-color: var(--green); color: #fff; }
+  .set-box.set-done .set-head { color: #9fd49f; }
+  .set-box.set-done input { color: #eaffea; }
+
+  /* CHECKBOXES */
+  .check-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .check-item:last-child { border-bottom: none; }
+  .check-item input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+  .check-item label { font-size: 14px; line-height: 1.4; cursor: pointer; flex: 1; }
+  .check-item.done label { color: var(--muted); text-decoration: line-through; }
+
+  /* BAND LIBRARY */
+  .muscle-group { margin-bottom: 8px; }
+  .mg-header { background: var(--surface2); padding: 10px 14px; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-radius: 8px; }
+  .mg-body { display: none; padding: 8px 0; }
+  .mg-body.open { display: block; }
+  .band-ex { padding: 7px 14px; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .band-ex:last-child { border-bottom: none; }
+  .band-ex.shoulder-mod { opacity: 0.5; }
+  .band-ex .ex-tag { font-size: 10px; color: #ff6b6b; }
+
+  /* PROGRESS */
+  .progress-bar-wrap { background: var(--surface2); border-radius: 20px; height: 8px; overflow: hidden; margin: 8px 0; }
+  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 20px; transition: width 0.5s; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .week-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .week-row:last-child { border-bottom: none; }
+  .week-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .week-dot.done { background: var(--green); }
+  .week-dot.current { background: var(--accent); }
+  .week-info { flex: 1; }
+  .week-name { font-size: 13px; font-weight: 600; }
+  .week-sub { font-size: 11px; color: var(--muted); }
+  .week-pct { font-size: 12px; font-weight: 700; color: var(--accent); }
+
+  /* BUTTONS */
+  .btn { display: block; width: 100%; padding: 13px; background: var(--accent); color: #000; border: none; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer; text-align: center; margin-bottom: 8px; }
+  .btn:active { transform: scale(0.98); }
+  .btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn.red { background: #c62828; color: #fff; }
+
+  /* SECTION TITLES */
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 16px 0 8px; }
+  .day-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-bottom: 8px; }
+  .day-gym { background: #1a3a5c; color: var(--blue); }
+  .day-home { background: #1a3a1a; color: var(--green); }
+  .day-rest { background: #2a2a1a; color: #aaa; }
+
+  /* NOTES */
+  .coach-note { background: #1a2a1a; border-left: 3px solid var(--accent); padding: 10px 12px; border-radius: 0 8px 8px 0; margin: 8px 0; font-size: 12px; line-height: 1.5; color: #ccc; }
+
+  /* NUTRITION */
+  .nutrition-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .nutrition-row:last-child { border-bottom: none; }
+  .n-label { font-size: 13px; }
+  .n-val { font-size: 14px; font-weight: 700; color: var(--accent); }
+
+  /* TOGGLE */
+  .collapsed .card-body { display: none; }
+  .chevron { transition: transform 0.2s; }
+  .collapsed .chevron { transform: rotate(-90deg); }
+
+  /* WORKOUT COMPLETE */
+  .complete-banner { background: linear-gradient(135deg, #1a3a1a, #0d2d0d); border: 1px solid var(--green); border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 12px; }
+  .complete-banner .emoji { font-size: 32px; }
+  .complete-banner p { margin-top: 6px; color: var(--green); font-weight: 700; }
+
+  /* WEEK SELECTOR (Plan page) — 8 equal columns, always fits row */
+  .week-strip { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 10px; }
+  .week-pill { padding: 6px 2px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; text-align: center; color: var(--text); font-family: inherit; min-width: 0; }
+  .week-pill-num { font-size: 12px; font-weight: 800; line-height: 1.1; }
+  .week-pill-phase { font-size: 9px; color: var(--muted); margin-top: 1px; line-height: 1; }
+  .week-pill.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .week-pill.active .week-pill-phase { color: #000; }
+  .week-pill.current:not(.active) { border-color: var(--accent); }
+
+  /* TODAY HEADER CHIP */
+  .today-meta { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; margin-bottom: 10px; }
+  .today-meta strong { color: var(--accent); }
+
+  /* SCROLLABLE DATE STRIP */
+  .date-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
+  .date-strip::-webkit-scrollbar { display: none; }
+  .date-pill { flex-shrink: 0; padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .date-pill.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .date-pill.done { border-color: var(--green); color: var(--green); }
+</style>
+</head>
+<body>
+
+<div id="nav">
+  <button class="nav-btn active" onclick="showPage('today')">Today</button>
+  <button class="nav-btn" onclick="showPage('plan')">Plan</button>
+  <button class="nav-btn" onclick="showPage('bands')">Bands</button>
+  <button class="nav-btn" onclick="showPage('nutrition')">Nutrition</button>
+  <button class="nav-btn" onclick="showPage('progress')">Progress</button>
+</div>
+
+<!-- ==================== TODAY PAGE ==================== -->
+<div id="page-today" class="page active">
+  <div id="today-content"></div>
+</div>
+
+<!-- ==================== PLAN PAGE ==================== -->
+<div id="page-plan" class="page">
+  <div id="plan-content"></div>
+</div>
+
+<!-- ==================== BANDS PAGE ==================== -->
+<div id="page-bands" class="page">
+  <div style="margin-bottom:12px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">Resistance Band Library</div>
+    <div style="font-size:12px;color:var(--muted)">Organized by muscle group · use these for travel, home, or as substitutes</div>
+  </div>
+  <div class="coach-note"><strong>Shoulder flag</strong> = use caution or modify due to surgery history. Default to face pulls and rows first.</div>
+  <div id="band-content"></div>
+</div>
+
+<!-- ==================== NUTRITION PAGE ==================== -->
+<div id="page-nutrition" class="page">
+  <div class="coach-note" style="margin-bottom:12px">Reference only — pair with whatever eating framework you're following (Whole30, etc.). Logging happens in your eating app, not here.</div>
+
+  <div class="section-title">Daily Targets</div>
+  <div class="card">
+    <div class="card-body">
+      <div class="nutrition-row"><span class="n-label">Protein target</span><span class="n-val">155–175g</span></div>
+      <div class="nutrition-row"><span class="n-label">Calorie deficit (fat loss)</span><span class="n-val">−300–400 cal</span></div>
+      <div class="nutrition-row"><span class="n-label">Meals per day</span><span class="n-val">3–4</span></div>
+      <div class="nutrition-row"><span class="n-label">Caffeine cutoff</span><span class="n-val">Noon</span></div>
+      <div class="nutrition-row"><span class="n-label">Alcohol buffer before sleep</span><span class="n-val">3+ hrs</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">Protein Sources</div>
+  <div class="card">
+    <div class="card-body" id="protein-list"></div>
+  </div>
+
+  <div class="section-title">Sleep Habits</div>
+  <div class="card">
+    <div class="card-body" id="sleep-list"></div>
+  </div>
+</div>
+
+<!-- ==================== PROGRESS PAGE ==================== -->
+<div id="page-progress" class="page">
+  <div class="section-title">Program Setup</div>
+  <div class="card">
+    <div class="card-body">
+      <div class="nutrition-row">
+        <span class="n-label">Start Date</span>
+        <input type="date" id="start-date" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:5px 8px;font-size:14px" onchange="saveStartDate()">
+      </div>
+      <div class="nutrition-row">
+        <span class="n-label">Current Phase</span>
+        <span class="n-val" id="current-phase-label">—</span>
+      </div>
+      <div class="nutrition-row">
+        <span class="n-label">Current Week</span>
+        <span class="n-val" id="current-week-label">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">8-Week Roadmap</div>
+  <div class="card">
+    <div class="card-body" id="week-map"></div>
+  </div>
+
+  <div class="section-title">Session Totals</div>
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <div class="section-title">Personal Records</div>
+  <div class="card">
+    <div class="card-body" id="pr-section"></div>
+  </div>
+
+  <div class="section-title">Danger Zone</div>
+  <button class="btn red" onclick="if(confirm('Reset ALL data? This cannot be undone.'))resetAll()">Reset All Data</button>
+</div>
+
+<script>
+// ====================================================
+// DATA
+// ====================================================
+const WORKOUTS = {
+  mon_p1: {
+    name: "Lower Body A", day: "Monday", phase: 1,
+    type: "gym", icon: "",
+    note: "Quad-dominant. RPE 6 — leave 4+ reps in reserve. Starting lighter than you think is the right call.",
+    exercises: [
+      { id:"goblet", name:"Goblet Squat", sets:2, reps:"12", rest:"2 min",
+        how:"Hold one dumbbell vertical at your chest (cup the top bell with both hands). Feet shoulder-width. Squat straight down keeping chest up and elbows inside knees. Drive through mid-foot to stand.",
+        note:"Heels on yoga blocks or small plates if ankles feel tight." },
+      { id:"legpress", name:"Leg Press", sets:2, reps:"12", rest:"2 min",
+        how:"Sit in the machine, feet shoulder-width on the platform, mid-foot pressure. Lower until knees ~90°, then press. Don't lock knees at top.",
+        note:"Staple movement for quad volume with low spinal load." },
+      { id:"legext", name:"Leg Extension", sets:2, reps:"12-15", rest:"2 min",
+        how:"Seated, pad just above ankle. Extend knees fully, brief squeeze at the top, lower under control.",
+        note:"Full ROM beats heavy half-reps here." },
+      { id:"lunge", name:"Walking Lunge (DBs at sides)", sets:2, reps:"10 each", rest:"2 min",
+        how:"DB in each hand at your sides. Step forward, lower until back knee hovers above floor, push through front heel to step the back leg through.",
+        note:"DBs at sides keeps all load off your shoulders." },
+      { id:"calf_m", name:"Standing Calf Raise", sets:2, reps:"15", rest:"90s",
+        how:"On the machine or a step edge, balls of feet on the platform. Drop heels for a stretch, then rise as high as you can. Pause at the top.",
+        note:"Slow on the way down — that's where calves grow." },
+    ]
+  },
+  tue_p1: {
+    name: "Upper Body Push", day: "Tuesday", phase: 1,
+    type: "gym", icon: "",
+    note: "Shoulder-modified. Neutral grip throughout. Face pulls are non-negotiable for shoulder health.",
+    warmup: ["Band pull-aparts 3×15", "Arm circles 10 fwd / 10 back", "Push-up to downward dog 8 reps"],
+    exercises: [
+      { id:"incline_db", name:"Incline Neutral-Grip DB Press", sets:2, reps:"10", rest:"2 min",
+        how:"Bench set to ~45°. Hold dumbbells with palms facing each other (neutral grip). Press straight up, elbows tucked roughly 45° from torso. Lower to chest level under control.",
+        note:"No barbell yet — neutral grip is far easier on a repaired shoulder.", shoulder: true },
+      { id:"landmine", name:"Single-Arm Landmine Press", sets:2, reps:"10 each", rest:"2 min",
+        how:"One end of a barbell wedged in a corner or landmine attachment, other end at shoulder. Hold the loaded end at the front of one shoulder. Press up and slightly forward in an arc, not straight overhead. The angle protects the shoulder vs. a true overhead press.",
+        note:"No landmine? Sub a DB Floor Press: lie on the floor, press a DB straight up; the floor stops your elbow before any shoulder strain.", shoulder: true },
+      { id:"cable_fly", name:"Cable Chest Fly (low-to-high)", sets:2, reps:"12-15", rest:"2 min",
+        how:"Cables anchored low. Stand slightly forward of the pulleys, slight bend in elbows fixed throughout. Sweep your hands up and together in front of your collarbones, like scooping. Slow on the way back.",
+        note:"Think 'hug a tree' upward arc, not a press." },
+      { id:"facepull", name:"Cable / DB Face Pull", sets:3, reps:"15", rest:"90s",
+        how:"Rope attachment at upper-chest height. Pull the rope toward your face, separating the handles so your hands end up near your ears with elbows high. External rotation at the end is the whole point.",
+        note:"Include this every push day. It's the single best rotator-cuff insurance move." },
+      { id:"pressdown", name:"Tricep Pressdown (rope)", sets:2, reps:"12-15", rest:"90s",
+        how:"Rope on the high pulley. Elbows pinned to your sides, only forearms move. Extend down and slightly out at the bottom; resist on the way up.",
+        note:"If your elbows flare, drop the weight." },
+    ]
+  },
+  wed: {
+    name: "Active Recovery", day: "Wednesday", phase: 1,
+    type: "home", icon: "",
+    note: "Not optional. This is the day that lets Thursday's session feel good.",
+    checklist: [
+      "5 min jump rope (nasal breathing only — aerobic flush, not cardio)",
+      "Yoga block under mid-back: 2 min thoracic extension (arms wide, breathe)",
+      "Hip flexor kneeling stretch: 60 sec each side",
+      "Pigeon pose or figure-4 glute stretch: 60 sec each side",
+      "Child's pose: 60 sec",
+      "10-min walk outside (morning sunlight helps sleep that night)"
+    ]
+  },
+  thu_p1: {
+    name: "Lower Body B", day: "Thursday", phase: 1,
+    type: "gym", icon: "",
+    note: "Hip and hinge dominant. Strong glutes are one of the highest-ROI investments for long-term joint health.",
+    warmup: ["Glute bridge on floor 2×15 bodyweight", "Clamshell 2×15 each side", "Leg swing fwd/back 10 each leg"],
+    exercises: [
+      { id:"rdl", name:"Romanian Deadlift (DBs)", sets:2, reps:"10", rest:"2 min",
+        how:"DBs in front of thighs. Soft (not bent) knees. Push your hips straight back like closing a car door with your butt; let the DBs slide down your legs until you feel a hamstring stretch. Reverse by driving hips forward.",
+        note:"Spine stays neutral the entire rep — this is a hinge, not a squat." },
+      { id:"hipthrust", name:"Hip Thrust (DB on hips)", sets:2, reps:"12", rest:"2 min",
+        how:"Upper back on a bench, feet flat on floor with shins vertical at the top. DB across your hips (a pad or folded towel helps). Drive heels through floor, squeeze glutes hard to lift hips until torso is parallel to floor.",
+        note:"Full hip extension at the top — no over-arching the low back." },
+      { id:"legcurl", name:"Leg Curl (machine)", sets:2, reps:"10-12", rest:"2 min",
+        how:"Lying or seated. Pad just above your heel. Curl the weight up by pulling your heels toward your butt; lower over a 3-second count.",
+        note:"Slow eccentrics build the hamstrings; rushed reps don't." },
+      { id:"slrdl", name:"Single-Leg RDL (light DB)", sets:2, reps:"8 each", rest:"2 min",
+        how:"DB in one hand, stand on the opposite leg with a soft knee. Hinge at the hip and let the free leg float back as a counterbalance — torso and rear leg form one line. Return to standing.",
+        note:"Touch a wall with your free hand for balance. Movement quality > weight." },
+      { id:"deadbug", name:"Dead Bug", sets:2, reps:"8 each side", rest:"90s",
+        how:"Lie on your back, arms straight up over chest, knees and hips at 90° (tabletop). Press lower back flat to the floor. Slowly lower opposite arm overhead and opposite leg toward the floor, return, switch sides.",
+        note:"If your lower back lifts off the floor, shorten the range. Slow and controlled." },
+    ]
+  },
+  fri_p2: {
+    name: "Upper Body Pull", day: "Friday", phase: 2,
+    type: "gym", icon: "",
+    note: "Neutral grip on everything. Pulling movements are the safest upper-body work for a shoulder history.",
+    warmup: ["Band pull-aparts 3×15", "Dead hang from bar 3×20 sec (decompresses shoulder)", "Cat-cow 10 reps"],
+    exercises: [
+      { id:"cabrow", name:"Seated Cable Row (neutral grip)", sets:3, reps:"10-12", rest:"2 min",
+        how:"Sit tall with the close-grip neutral handle. Pull the handle to your lower ribs/upper abs, driving elbows back and down (toward your hip), not up to your ribs. Squeeze shoulder blades.",
+        note:"Chest stays proud the whole rep — no jerking back with your low back." },
+      { id:"pulldown", name:"Lat Pulldown (neutral/close grip)", sets:3, reps:"10-12", rest:"2 min",
+        how:"Use the neutral-grip (palms facing each other) handle. Lean back ~10°, pull the handle to your upper chest, elbows tracking down and slightly back.",
+        note:"Avoid wide-grip barbell pulldowns for now — that grip stresses the shoulder." },
+      { id:"dbrow", name:"Single-Arm DB Row (brace on bench)", sets:2, reps:"10-12 each", rest:"2 min",
+        how:"Place opposite knee and hand on a bench, flat back. DB hangs from the free hand. Row by driving your elbow up toward your hip — not out to the side. Pause at the top.",
+        note:"Elbow to hip, not elbow to ceiling. Squeeze the lat at the top." },
+      { id:"reardelt", name:"Rear Delt Fly (bent over, light)", sets:2, reps:"15", rest:"90s",
+        how:"Bend at the hips to ~45°, DBs hanging down with a slight elbow bend. Raise the DBs out to your sides like a 'T,' leading with your pinkies. Don't shrug — the work is in the back of the shoulder.",
+        note:"Very light. This is for shoulder balance, not size." },
+      { id:"hammer", name:"Hammer Curl", sets:2, reps:"12", rest:"90s",
+        how:"DBs at your sides, palms facing each other (neutral grip). Curl up keeping palms facing in the whole time. Slow on the way down.",
+        note:"Neutral grip puts less stress on the bicep tendon than a supinated curl." },
+      { id:"fp2", name:"Face Pull", sets:2, reps:"15", rest:"90s",
+        how:"Rope at upper-chest height. Pull the rope to your face, splitting your hands toward your ears with elbows high and externally rotating.",
+        note:"Repeat from Tuesday — this is your shoulder's best friend." },
+    ]
+  },
+  sat: {
+    name: "Home Circuit", day: "Saturday", phase: 1,
+    type: "home", icon: "",
+    note: "Phase 1: 2 rounds. Phase 2+: 3 rounds. 40s work / 20s rest. Light DBs — this is conditioning, not a lifting session.",
+    checklist: [
+      "DB Goblet Squat — 40s",
+      "DB Romanian Deadlift — 40s",
+      "Single-Arm DB Row (brace on bench, alternate each round) — 40s",
+      "Jump Rope (easy pace) — 40s",
+      "DB Farmer Carry (walk room length and back) — 40s",
+      "Dead Bug (slow and deliberate) — 40s",
+      "Jump Rope (finish strong) — 40s",
+      "— REST 2 MIN —",
+      "Repeat for Round 2 (+ Round 3 in Phase 2)"
+    ]
+  },
+  sun: {
+    name: "Full Rest", day: "Sunday", phase: 1,
+    type: "rest", icon: "",
+    note: "No training. Walk if you want. Prepping tomorrow's meals tonight pays a huge dividend for the week.",
+    checklist: [
+      "Plan tomorrow's meals tonight",
+      "Prep protein sources for the week",
+      "Review weights logged this week — any PRs?",
+      "Check sleep time consistency"
+    ]
+  },
+  // Phase 2 upgrades
+  mon_p2: {
+    name: "Lower Body A", day: "Monday", phase: 2,
+    type: "gym", icon: "",
+    note: "RPE 7-8 now. 2-3 reps in reserve. Add weight vs last week if all reps were clean.",
+    exercises: [
+      { id:"goblet_p2", name:"Goblet Squat (heels elevated)", sets:3, reps:"10-12", rest:"2 min",
+        how:"Same as Phase 1 goblet squat, but heels on 5-lb plates or yoga blocks. Elevated heels = deeper squat with more quad emphasis.",
+        note:"DB at chest, elbows inside knees." },
+      { id:"legpress_p2", name:"Leg Press", sets:3, reps:"10-12", rest:"2 min",
+        how:"Same setup as Phase 1, heavier load.",
+        note:"" },
+      { id:"legext_p2", name:"Leg Extension", sets:2, reps:"12-15", rest:"2 min",
+        how:"Full ROM, top squeeze, controlled descent.",
+        note:"" },
+      { id:"lunge_p2", name:"Walking Lunge (DBs)", sets:2, reps:"10 each", rest:"2 min",
+        how:"DBs at sides. Step, lower, drive through front heel.",
+        note:"" },
+      { id:"calf_p2", name:"Standing Calf Raise", sets:3, reps:"15", rest:"90s",
+        how:"Full stretch at the bottom, full rise at the top.",
+        note:"" },
+    ]
+  },
+  tue_p2: {
+    name: "Upper Body Push", day: "Tuesday", phase: 2,
+    type: "gym", icon: "",
+    note: "Shoulder-modified. Add overhead tricep extension this phase — keep it light and pain-free.",
+    warmup: ["Band pull-aparts 3×15", "Arm circles 10 fwd / 10 back", "Push-up to downward dog 8 reps"],
+    exercises: [
+      { id:"incline_p2", name:"Incline Neutral-Grip DB Press", sets:3, reps:"8-10", rest:"2 min",
+        how:"Same form as Phase 1. RPE 8 — 2 reps left in the tank on the last set.",
+        note:"Still neutral grip. No barbell.", shoulder: true },
+      { id:"landmine_p2", name:"Single-Arm Landmine / DB Floor Press", sets:3, reps:"8-10 each", rest:"2 min",
+        how:"Either variation from Phase 1. Heavier load, same neutral-grip arc.",
+        note:"", shoulder: true },
+      { id:"fly_p2", name:"Cable Chest Fly (low-to-high)", sets:2, reps:"12-15", rest:"2 min",
+        how:"Low anchor, sweep up and in.",
+        note:"" },
+      { id:"fp_p2", name:"Cable / DB Face Pull", sets:3, reps:"15", rest:"90s",
+        how:"Rope to face, elbows high, external rotation at end.",
+        note:"" },
+      { id:"trioh", name:"Tricep Overhead DB Extension (seated)", sets:2, reps:"10-12", rest:"90s",
+        how:"Seated, both hands cup one DB behind your head. Elbows stay pointed at the ceiling — only the forearms move. Lower the DB behind your head, then extend.",
+        note:"Light weight. Stop immediately if you feel any shoulder pinch.", shoulder: true },
+      { id:"press_p2", name:"Tricep Pressdown (rope)", sets:2, reps:"12-15", rest:"90s",
+        how:"Elbows pinned at sides, only forearms move.",
+        note:"" },
+    ]
+  },
+  thu_p2: {
+    name: "Lower Body B", day: "Thursday", phase: 2,
+    type: "gym", icon: "",
+    note: "Switch RDL to barbell if it feels comfortable. Add plank for trunk endurance.",
+    warmup: ["Glute bridge 2×15", "Clamshell 2×15 each", "Leg swing 10 each"],
+    exercises: [
+      { id:"rdl_p2", name:"Romanian Deadlift (DBs or bar)", sets:3, reps:"10", rest:"2 min",
+        how:"Same hinge pattern as Phase 1. If using a bar: bar starts at hip, push hips back, bar slides down legs to mid-shin or wherever you feel a strong hamstring stretch.",
+        note:"RPE 8. Spine stays neutral." },
+      { id:"ht_p2", name:"Hip Thrust (DB or bar)", sets:3, reps:"10-12", rest:"2 min",
+        how:"Upper back on bench, shins vertical at top, load on hips. Drive through heels, full glute squeeze at top.",
+        note:"" },
+      { id:"lc_p2", name:"Leg Curl (machine)", sets:3, reps:"10-12", rest:"2 min",
+        how:"3-sec eccentric on every rep.",
+        note:"" },
+      { id:"slrdl_p2", name:"Single-Leg RDL", sets:2, reps:"10 each", rest:"2 min",
+        how:"DB in opposite hand, hinge, free leg floats back as a counterbalance.",
+        note:"" },
+      { id:"db_p2", name:"Dead Bug", sets:3, reps:"10 each side", rest:"90s",
+        how:"Lower back pressed flat to the floor, opposite arm + leg lower slowly.",
+        note:"" },
+      { id:"plank", name:"Plank", sets:2, reps:"30-40 sec", rest:"60s",
+        how:"Forearms on the floor, elbows under shoulders, body in one straight line from heels to head. Squeeze glutes and brace your abs — don't let your hips sag or pike up.",
+        note:"Quality beats duration — stop when form breaks." },
+    ]
+  }
+};
+
+const BAND_EXERCISES = [
+  { group: "1. Quads", exercises: [
+    { name: "Banded Front Squats", note: "Step on band, loop over shoulders" },
+    { name: "Banded Split Squats", note: "Front foot on band" },
+    { name: "Banded Goblet Squats", note: "Band under feet, hold looped at chest" },
+    { name: "Banded Spanish Squats", note: "Band anchored behind knees" },
+    { name: "Banded Leg Extensions", note: "Seated, band anchored behind chair" },
+  ]},
+  { group: "2. Hip Hinge / Hamstrings / Glutes", exercises: [
+    { name: "Banded RDLs", note: "Hinge at hips" },
+    { name: "Banded Good Mornings", note: "Band around neck & feet" },
+    { name: "Banded Pull-Throughs", note: "Anchored low behind you" },
+    { name: "Banded Hip Thrusts", note: "Band across hips" },
+    { name: "Lying Banded Hamstring Curls", note: "Table leg anchor" },
+  ]},
+  { group: "3. Shoulders", shoulder: true, exercises: [
+    { name: "Banded Overhead Press", note: "Standing or kneeling", shoulder: true },
+    { name: "Banded Single-Arm Press", note: "Step on one end", shoulder: true },
+    { name: "Banded Lateral Raises", note: "Step on one end", shoulder: true },
+    { name: "Banded Front Raises", note: "", shoulder: true },
+    { name: "Banded Face Pulls", note: "Anchor at eye level — shoulder-safe" },
+    { name: "Banded Rear Delt Flyes (Pull-Aparts)", note: "Great for shoulder health" },
+  ]},
+  { group: "4. Back", exercises: [
+    { name: "Banded Lat Pull-Downs", note: "Anchor high on door/hook" },
+    { name: "Banded Single-Arm Lat Pull-ins", note: "" },
+    { name: "Banded Straight-Arm Pull-overs", note: "" },
+    { name: "Banded Seated Rows", note: "Feet as anchor" },
+    { name: "Banded Standing Mid-Rows", note: "" },
+    { name: "Banded Single-Arm Rows", note: "" },
+    { name: "Banded Bent-Over Rows", note: "" },
+  ]},
+  { group: "5. Chest", exercises: [
+    { name: "Banded Push-Ups", note: "Band across back, held in hands" },
+    { name: "Banded Standing Chest Press", note: "Anchor at mid-back" },
+    { name: "Banded Single-Arm Chest Press", note: "" },
+    { name: "Banded Chest Flyes", note: "Anchor to door frame" },
+    { name: "Banded Floor Press", note: "Lying on the band — shoulder-safe" },
+  ]},
+  { group: "6. Arms", exercises: [
+    { name: "Banded Overhead Extensions (Tricep)", note: "" },
+    { name: "Banded Push-Downs (Tricep)", note: "Anchor high" },
+    { name: "Banded Tricep Kickbacks", note: "" },
+    { name: "Banded Bicep Curls", note: "Underhand grip" },
+    { name: "Banded Hammer Curls", note: "Neutral grip — easiest on bicep tendon" },
+    { name: "Banded Concentration Curls", note: "Seated" },
+  ]},
+  { group: "7. Calves", exercises: [
+    { name: "Banded Standing Calf Raises", note: "Stand on band" },
+    { name: "Banded Seated Calf Press", note: "Against band tension" },
+  ]},
+  { group: "8. Abs / Core", exercises: [
+    { name: "Banded Pallof Press", note: "Anti-rotation — anchor at side" },
+    { name: "Banded Woodchoppers", note: "Anchor low or high" },
+    { name: "Banded Dead Bugs", note: "Band anchored behind head" },
+    { name: "Banded Bicycle Crunches", note: "" },
+  ]},
+];
+
+const PROTEIN_SOURCES = [
+  "Chicken breast (30g per 100g)",
+  "Eggs (6g each — aim for 3+)",
+  "Greek yogurt (17g per 200g)",
+  "Tuna (25g per 100g)",
+  "Shrimp (20g per 100g)",
+  "Salmon (25g per 100g)",
+];
+
+const SLEEP_CHECKLIST = [
+  "Same sleep/wake time as yesterday",
+  "No caffeine after noon",
+  "No screens 60 min before bed",
+  "Room temp 64–68°F (fan/AC on)",
+  "Morning sunlight within 1hr of waking",
+  "No alcohol within 3hrs of sleep",
+];
+
+const WEEK_MAP = [
+  { week: 1, phase: "Phase 1", theme: "Foundation — show up, learn movements, RPE 6", days: "Mon/Tue/Thu + Sat circuit" },
+  { week: 2, phase: "Phase 1", theme: "Foundation — repeat week 1 at same weights", days: "Mon/Tue/Thu + Sat circuit" },
+  { week: 3, phase: "Phase 2", theme: "Build — add Friday Pull, push to RPE 7-8", days: "Mon/Tue/Thu/Fri + Sat circuit" },
+  { week: 4, phase: "Phase 2", theme: "Build — progressive overload begins", days: "Mon/Tue/Thu/Fri + Sat circuit" },
+  { week: 5, phase: "Phase 2+", theme: "Overload — add weight when reps clean at RPE 7-8", days: "Mon/Tue/Thu/Fri + Sat circuit" },
+  { week: 6, phase: "Phase 2+", theme: "Overload — consider 4 sets on priority lifts", days: "Mon/Tue/Thu/Fri + Sat circuit" },
+  { week: 7, phase: "Phase 2+", theme: "Overload — push PRs on row + RDL", days: "Mon/Tue/Thu/Fri + Sat circuit" },
+  { week: 8, phase: "Phase 2+", theme: "Test week — log PRs, then plan next block", days: "Mon/Tue/Thu/Fri + Sat circuit" },
+];
+
+// ====================================================
+// STATE / LOCALSTORAGE
+// ====================================================
+const LS = {
+  get(k, fb){ try { const v = localStorage.getItem(k); return v===null?fb:JSON.parse(v); } catch(e){ return fb; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} },
+};
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+// Workout / program data is scoped by WEEK (the program unit), not date.
+// Nutrition + meals stay date-scoped because those are daily lifestyle.
+const setKey     = (week, exId, idx, field) => `set:w${week}:${exId}:${idx}:${field}`;
+const doneKey    = (week, exId, idx) => `done:w${week}:${exId}:${idx}`;
+const chkKeyW    = (week, scope, idx) => `chk:w${week}:${scope}:${idx}`;
+const sessionKey = (week, dayKey) => `session:w${week}:${dayKey}`;
+
+const PLAN_DAYS = ["mon","tue","wed","thu","fri","sat","sun"];
+const DAY_LABEL = { mon:"Mon", tue:"Tue", wed:"Wed", thu:"Thu", fri:"Fri", sat:"Sat", sun:"Sun" };
+const DAY_FULL  = { mon:"Monday", tue:"Tuesday", wed:"Wednesday", thu:"Thursday", fri:"Friday", sat:"Saturday", sun:"Sunday" };
+const DOW_TO_INDEX = [6,0,1,2,3,4,5]; // JS getDay(): 0=Sun..6=Sat -> PLAN_DAYS index
+
+function getStartDate(){ return LS.get("startDate", null); }
+function saveStartDate(){
+  const v = document.getElementById("start-date").value;
+  if(v) LS.set("startDate", v);
+  renderProgress();
+  renderToday();
+}
+function currentWeek(){
+  const sd = getStartDate();
+  if(!sd) return 1;
+  const start = new Date(sd + "T00:00:00");
+  const now = new Date();
+  const days = Math.floor((now - start) / 86400000);
+  return Math.min(8, Math.max(1, Math.floor(days/7) + 1));
+}
+function phaseForWeek(w){ return w <= 2 ? 1 : 2; }
+function phaseLabelForWeek(w){ return w <= 2 ? "P1" : w <= 4 ? "P2" : "P2+"; }
+function todayDayIdx(){ return DOW_TO_INDEX[new Date().getDay()]; }
+
+function planKeyFor(dayKey, week){
+  const phase = phaseForWeek(week);
+  if(phase===1){
+    return { mon:"mon_p1", tue:"tue_p1", wed:"wed", thu:"thu_p1", fri:null, sat:"sat", sun:"sun" }[dayKey];
+  }
+  return { mon:"mon_p2", tue:"tue_p2", wed:"wed", thu:"thu_p2", fri:"fri_p2", sat:"sat", sun:"sun" }[dayKey];
+}
+function workoutFor(week, dayKey){
+  const k = planKeyFor(dayKey, week);
+  return k ? WORKOUTS[k] : null;
+}
+
+// ====================================================
+// NAVIGATION
+// ====================================================
+function showPage(name){
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  const page = document.getElementById("page-" + name);
+  if(page) page.classList.add("active");
+  const btn = Array.from(document.querySelectorAll(".nav-btn"))
+    .find(b => b.getAttribute("onclick") && b.getAttribute("onclick").includes("'"+name+"'"));
+  if(btn) btn.classList.add("active");
+  window.scrollTo(0,0);
+  if(name==="today")    renderToday();
+  if(name==="plan")     renderPlan();
+  if(name==="bands")    renderBands();
+  if(name==="nutrition")renderNutrition();
+  if(name==="progress") renderProgress();
+}
+
+// ====================================================
+// RENDERERS — shared day card (used by Today and Plan)
+// ====================================================
+function dayTagClass(type){
+  return type==="gym" ? "day-gym" : type==="home" ? "day-home" : "day-rest";
+}
+function exerciseRowHTML(ex, week){
+  const flag = ex.shoulder ? '<span class="shoulder-flag">⚠ shoulder</span>' : '';
+  const how = ex.how ? `<div class="ex-how">${ex.how}</div>` : '';
+  const note = ex.note ? `<div class="ex-note">${ex.note}</div>` : '';
+  let sets = '';
+  if(ex.sets){
+    sets = '<div class="sets-grid">';
+    for(let i=0;i<ex.sets;i++){
+      const wv = LS.get(setKey(week, ex.id, i, "w"), "");
+      const rv = LS.get(setKey(week, ex.id, i, "r"), "");
+      const done = LS.get(doneKey(week, ex.id, i), false);
+      sets += `
+        <div class="set-box ${done?'set-done':''}" data-ex="${ex.id}" data-i="${i}">
+          <div class="set-head">
+            <span>Set ${i+1}</span>
+            <span class="set-target">${ex.reps} reps</span>
+          </div>
+          <div class="set-weight-row">
+            <input type="number" inputmode="decimal" placeholder="0" value="${wv}"
+                   oninput="saveSet(${week},'${ex.id}',${i},'w',this.value)">
+            <span class="unit">lb</span>
+          </div>
+          <input class="set-reps-input" type="number" inputmode="numeric" placeholder="reps" value="${rv}"
+                 oninput="saveSet(${week},'${ex.id}',${i},'r',this.value)">
+          <button class="set-mark"
+                  onclick="toggleDone(${week},'${ex.dayKey}','${ex.id}',${i},this)">${done?'Done':'Mark done'}</button>
+        </div>`;
+    }
+    sets += '</div>';
+  }
+  return `
+    <div class="exercise-row">
+      <div class="ex-name">${ex.name} ${flag}</div>
+      ${how}
+      ${note}
+      ${sets}
+      ${ex.rest?`<div class="ex-note" style="margin-top:6px">Rest: <strong>${ex.rest}</strong></div>`:''}
+    </div>`;
+}
+function renderDayCard(week, dayKey){
+  const w = workoutFor(week, dayKey);
+  if(!w){
+    return `<div class="card"><div class="card-body">
+      <div class="ex-name">${DAY_FULL[dayKey]} — Rest</div>
+      <div class="ex-note">No scheduled session. Friday Pull starts in Phase 2 (week 3+).</div>
+    </div></div>`;
+  }
+  let html = `
+    <div class="card">
+      <div class="card-header"><h3>${w.day} — ${w.name}</h3>
+        <span class="day-tag ${dayTagClass(w.type)}">${w.type.toUpperCase()}</span>
+      </div>
+      <div class="card-body">
+        <div class="coach-note">${w.note||''}</div>`;
+
+  if(w.warmup){
+    html += `<div class="section-title">Warmup</div>`;
+    w.warmup.forEach((line, i) => {
+      const done = LS.get(chkKeyW(week, "warmup_"+dayKey, i), false);
+      html += `
+        <div class="check-item ${done?'done':''}">
+          <input type="checkbox" ${done?'checked':''}
+            onchange="LS.set('${chkKeyW(week,'warmup_'+dayKey,i)}', this.checked); this.closest('.check-item').classList.toggle('done', this.checked)">
+          <label>${line}</label>
+        </div>`;
+    });
+  }
+  if(w.exercises){
+    html += `<div class="section-title" style="margin-top:14px">Working Sets</div>`;
+    w.exercises.forEach(ex => {
+      // attach dayKey for toggleDone wiring without mutating the template
+      html += exerciseRowHTML(Object.assign({ dayKey }, ex), week);
+    });
+  }
+  if(w.checklist){
+    html += `<div class="section-title">Checklist</div>`;
+    w.checklist.forEach((line, i) => {
+      const done = LS.get(chkKeyW(week, "list_"+dayKey, i), false);
+      html += `
+        <div class="check-item ${done?'done':''}">
+          <input type="checkbox" ${done?'checked':''}
+            onchange="LS.set('${chkKeyW(week,'list_'+dayKey,i)}', this.checked); this.closest('.check-item').classList.toggle('done', this.checked); markRestSessionDone(${week}, '${dayKey}', ${w.checklist.length})">
+          <label>${line}</label>
+        </div>`;
+    });
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+function saveSet(week, exId, idx, field, value){
+  if(!week) return;
+  LS.set(setKey(week, exId, idx, field), value);
+  if(field==="w"){
+    const num = parseFloat(value);
+    if(!isNaN(num)){
+      const prk = "pr:"+exId;
+      const cur = LS.get(prk, 0);
+      if(num > cur){
+        LS.set(prk, num);
+        LS.set(prk+":week", week);
+        LS.set(prk+":date", todayKey());
+      }
+    }
+  }
+}
+function toggleDone(week, dayKey, exId, idx, btn){
+  if(!week) return;
+  const k = doneKey(week, exId, idx);
+  const cur = LS.get(k, false);
+  LS.set(k, !cur);
+  const box = btn.closest(".set-box");
+  box.classList.toggle("set-done", !cur);
+  btn.textContent = !cur ? "Done" : "Mark done";
+  updateSessionState(week, dayKey);
+}
+function updateSessionState(week, dayKey){
+  const w = workoutFor(week, dayKey);
+  if(!w || !w.exercises) return;
+  let total = 0, done = 0;
+  w.exercises.forEach(ex => {
+    for(let i=0;i<ex.sets;i++){
+      total++;
+      if(LS.get(doneKey(week, ex.id, i), false)) done++;
+    }
+  });
+  if(total>0 && done===total) LS.set(sessionKey(week, dayKey), true);
+  else LS.del(sessionKey(week, dayKey));
+  // Update the "today" complete banner if it's visible for this same day
+  const banner = document.getElementById("complete-banner");
+  if(banner && week===currentWeek() && dayKey===PLAN_DAYS[todayDayIdx()]){
+    banner.style.display = (total>0 && done===total) ? "block" : "none";
+  }
+  // Refresh day-strip "done" dot if Plan is visible
+  const stripPill = document.querySelector(`#plan-strip [data-day="${dayKey}"]`);
+  if(stripPill) stripPill.classList.toggle("done", total>0 && done===total);
+}
+function markRestSessionDone(week, dayKey, total){
+  let done = 0;
+  for(let i=0;i<total;i++) if(LS.get(chkKeyW(week,"list_"+dayKey,i),false)) done++;
+  if(done===total) LS.set(sessionKey(week, dayKey), true);
+  else LS.del(sessionKey(week, dayKey));
+  const stripPill = document.querySelector(`#plan-strip [data-day="${dayKey}"]`);
+  if(stripPill) stripPill.classList.toggle("done", done===total);
+}
+
+// ====================================================
+// TODAY PAGE
+// ====================================================
+function renderToday(){
+  const week = currentWeek();
+  const dayKey = PLAN_DAYS[todayDayIdx()];
+  const el = document.getElementById("today-content");
+  const sd = getStartDate();
+  const headerNote = sd
+    ? `Today · <strong>Week ${week}</strong> · ${DAY_FULL[dayKey]}`
+    : `Today · ${DAY_FULL[dayKey]} <span style="color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400">(set a start date on Progress to track weeks)</span>`;
+  el.innerHTML = `
+    <div class="today-meta">${headerNote}</div>
+    <div class="complete-banner" id="complete-banner" style="display:none">
+      <p>Session complete. Eat your protein.</p>
+    </div>
+    ${renderDayCard(week, dayKey)}
+  `;
+  updateSessionState(week, dayKey);
+}
+
+// ====================================================
+// PLAN PAGE — week × day data-entry surface
+// ====================================================
+function renderPlan(){
+  const el = document.getElementById("plan-content");
+  if(window.__planWeek == null) window.__planWeek = currentWeek();
+  if(window.__planDay == null)  window.__planDay  = todayDayIdx();
+  const week = window.__planWeek;
+  const dayIdx = window.__planDay;
+  const dayKey = PLAN_DAYS[dayIdx];
+  const cw = currentWeek();
+
+  // Week selector
+  let wks = `<div class="section-title" style="margin:0 0 4px">Week</div><div class="week-strip">`;
+  for(let i=1;i<=8;i++){
+    const cls = (i===week?' active':'') + (i===cw?' current':'');
+    wks += `<button class="week-pill${cls}" onclick="setPlanWeek(${i})">
+      <div class="week-pill-num">${i}</div>
+      <div class="week-pill-phase">${phaseLabelForWeek(i)}</div>
+    </button>`;
+  }
+  wks += `</div>`;
+
+  // Day strip with done indicators
+  let strip = `<div class="date-strip" id="plan-strip">`;
+  PLAN_DAYS.forEach((d, i) => {
+    const done = LS.get(sessionKey(week, d), false) ? ' done' : '';
+    const active = i===dayIdx ? ' active' : '';
+    strip += `<div class="date-pill${active}${done}" data-day="${d}" onclick="setPlanDay(${i})">${DAY_LABEL[d]}</div>`;
+  });
+  strip += `</div>`;
+
+  const card = renderDayCard(week, dayKey);
+  const nav = `
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn secondary" style="flex:1" onclick="setPlanDay(${(dayIdx+6)%7})">← ${DAY_LABEL[PLAN_DAYS[(dayIdx+6)%7]]}</button>
+      <button class="btn secondary" style="flex:1" onclick="setPlanDay(${(dayIdx+1)%7})">${DAY_LABEL[PLAN_DAYS[(dayIdx+1)%7]]} →</button>
+    </div>`;
+
+  el.innerHTML = wks + strip + `<div id="plan-slide">` + card + `</div>` + nav;
+  attachPlanSwipe();
+}
+function setPlanWeek(w){
+  window.__planWeek = Math.min(8, Math.max(1, w));
+  renderPlan();
+}
+function setPlanDay(i){
+  window.__planDay = ((i % 7) + 7) % 7;
+  renderPlan();
+}
+function attachPlanSwipe(){
+  const slide = document.getElementById("plan-slide");
+  if(!slide) return;
+  let startX = 0, startY = 0, tracking = false;
+  slide.addEventListener("touchstart", e => {
+    if(e.touches.length !== 1) return;
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY; tracking = true;
+  }, { passive: true });
+  slide.addEventListener("touchend", e => {
+    if(!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5){
+      const cur = window.__planDay;
+      setPlanDay(dx < 0 ? cur + 1 : cur - 1);
+    }
+  }, { passive: true });
+}
+
+function renderBands(){
+  const el = document.getElementById("band-content");
+  let html = "";
+  BAND_EXERCISES.forEach((g, gi) => {
+    const open = LS.get("bandopen:"+gi, gi===0);
+    html += `
+      <div class="muscle-group">
+        <div class="mg-header" onclick="toggleBand(${gi}, this)">
+          <span>${g.group} ${g.shoulder?'<span class="shoulder-flag">⚠</span>':''}</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="mg-body ${open?'open':''}">`;
+    g.exercises.forEach(ex => {
+      const flag = ex.shoulder ? '<span class="ex-tag">⚠ caution</span>' : '';
+      html += `<div class="band-ex ${ex.shoulder?'shoulder-mod':''}"><strong>${ex.name}</strong> ${flag}${ex.note?' — <span style="color:var(--muted)">'+ex.note+'</span>':''}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  el.innerHTML = html;
+}
+function toggleBand(gi, el){
+  const body = el.nextElementSibling;
+  const open = body.classList.toggle("open");
+  LS.set("bandopen:"+gi, open);
+}
+
+function renderNutrition(){
+  document.getElementById("protein-list").innerHTML = PROTEIN_SOURCES
+    .map(s => `<div class="nutrition-row"><span class="n-label">${s}</span></div>`).join("");
+  document.getElementById("sleep-list").innerHTML = SLEEP_CHECKLIST
+    .map(s => `<div class="nutrition-row"><span class="n-label">${s}</span></div>`).join("");
+}
+
+function renderProgress(){
+  const sd = getStartDate();
+  if(sd) document.getElementById("start-date").value = sd;
+  const week = currentWeek();
+  document.getElementById("current-phase-label").textContent =
+    week<=2 ? "Phase 1" : week<=4 ? "Phase 2" : "Phase 2+";
+  document.getElementById("current-week-label").textContent = sd ? ("Week "+week+" / 8") : "Set start date";
+
+  const wm = document.getElementById("week-map");
+  let html = "";
+  WEEK_MAP.forEach(w => {
+    const state = !sd ? "" : w.week < week ? "done" : w.week === week ? "current" : "";
+    html += `
+      <div class="week-row">
+        <div class="week-dot ${state}"></div>
+        <div class="week-info">
+          <div class="week-name">Week ${w.week} · ${w.phase}</div>
+          <div class="week-sub">${w.theme}</div>
+        </div>
+        <div class="week-pct">${state==="done"?"✓":state==="current"?"now":""}</div>
+      </div>`;
+  });
+  wm.innerHTML = html;
+
+  // session totals
+  let sessions = 0;
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith("session:")) sessions++;
+  }
+  const sg = document.getElementById("stat-grid");
+  sg.innerHTML = `
+    <div class="stat-box"><div class="stat-num">${sessions}</div><div class="stat-label">Sessions logged</div></div>
+    <div class="stat-box"><div class="stat-num">${sd?week:0}</div><div class="stat-label">Current week</div></div>`;
+
+  // PRs
+  const prs = [];
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith("pr:") && !k.endsWith(":date")){
+      const exId = k.slice(3);
+      const val = LS.get(k, 0);
+      const date = LS.get(k+":date", "");
+      prs.push({ exId, val, date });
+    }
+  }
+  const prEl = document.getElementById("pr-section");
+  if(prs.length===0){
+    prEl.innerHTML = `<div class="ex-note">Log a weight on any set to start tracking PRs.</div>`;
+  } else {
+    prs.sort((a,b)=>b.val-a.val);
+    prEl.innerHTML = prs.map(p => {
+      const name = findExName(p.exId) || p.exId;
+      return `<div class="nutrition-row"><span class="n-label">${name}</span><span class="n-val">${p.val} lb <span style="color:var(--muted);font-weight:400;font-size:11px">· ${p.date}</span></span></div>`;
+    }).join("");
+  }
+}
+function findExName(id){
+  for(const k in WORKOUTS){
+    const w = WORKOUTS[k];
+    if(!w.exercises) continue;
+    const found = w.exercises.find(e => e.id===id);
+    if(found) return found.name;
+  }
+  return null;
+}
+
+function resetAll(){
+  localStorage.clear();
+  location.reload();
+}
+
+// ====================================================
+// INIT
+// ====================================================
+document.addEventListener("DOMContentLoaded", () => {
+  renderToday();
+});
+// Run immediately too in case DOMContentLoaded already fired
+if(document.readyState !== "loading") renderToday();
+</script>
+</body>
+</html>
