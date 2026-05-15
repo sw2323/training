@@ -156,10 +156,9 @@
   .today-meta { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; margin-bottom: 10px; }
   .today-meta strong { color: var(--accent); }
 
-  /* SCROLLABLE DATE STRIP */
-  .date-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
-  .date-strip::-webkit-scrollbar { display: none; }
-  .date-pill { flex-shrink: 0; padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  /* DAY STRIP — 7 equal columns, always fits */
+  .date-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 12px; }
+  .date-pill { padding: 7px 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; cursor: pointer; text-align: center; min-width: 0; }
   .date-pill.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
   .date-pill.done { border-color: var(--green); color: var(--green); }
 </style>
