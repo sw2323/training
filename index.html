@@ -56,8 +56,8 @@
   .shoulder-flag { background: #ff6b6b22; color: #ff6b6b; font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid #ff6b6b44; }
   .sets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; margin-top: 6px; }
   .set-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 6px; display: flex; flex-direction: column; gap: 5px; transition: background 0.15s, border-color 0.15s; min-width: 0; }
-  .set-head { display: flex; justify-content: space-between; align-items: center; font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; gap: 4px; }
-  .set-target { color: var(--accent); white-space: nowrap; }
+  .set-head { display: flex; flex-direction: column; align-items: flex-start; font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; gap: 1px; line-height: 1.2; }
+  .set-target { color: var(--accent); }
   .set-weight-row { display: flex; align-items: baseline; justify-content: center; gap: 3px; }
   .set-weight-row input { width: 100%; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 18px; font-weight: 800; text-align: center; padding: 6px 2px; outline: none; -moz-appearance: textfield; appearance: textfield; }
   .set-weight-row input::-webkit-outer-spin-button, .set-weight-row input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -87,9 +87,11 @@
   .mg-header { background: var(--surface2); padding: 10px 14px; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-radius: 8px; }
   .mg-body { display: none; padding: 8px 0; }
   .mg-body.open { display: block; }
-  .band-ex { padding: 7px 14px; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .band-ex { padding: 9px 14px; font-size: 13px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 3px; }
   .band-ex:last-child { border-bottom: none; }
   .band-ex.shoulder-mod { opacity: 0.5; }
+  .band-ex-name { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .band-ex-note { font-size: 12px; color: var(--muted); line-height: 1.4; }
   .band-ex .ex-tag { font-size: 10px; color: #ff6b6b; }
 
   /* PROGRESS */
@@ -888,7 +890,10 @@ function renderBands(){
         <div class="mg-body ${open?'open':''}">`;
     g.exercises.forEach(ex => {
       const flag = ex.shoulder ? '<span class="ex-tag">⚠ caution</span>' : '';
-      html += `<div class="band-ex ${ex.shoulder?'shoulder-mod':''}"><strong>${ex.name}</strong> ${flag}${ex.note?' — <span style="color:var(--muted)">'+ex.note+'</span>':''}</div>`;
+      html += `<div class="band-ex ${ex.shoulder?'shoulder-mod':''}">
+        <div class="band-ex-name">${ex.name} ${flag}</div>
+        ${ex.note?`<div class="band-ex-note">${ex.note}</div>`:''}
+      </div>`;
     });
     html += `</div></div>`;
   });
